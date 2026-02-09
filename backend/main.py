@@ -23,3 +23,13 @@ def health():
 @app.get("/api/hello")
 def hello():
     return {"msg": "hello from backend"}
+
+from pydantic import BaseModel
+
+class ChatRequest(BaseModel):
+    message: str
+
+@app.post("/api/chat")
+def chat(req: ChatRequest):
+    return {"reply": f"You said: {req.message}"}
+
