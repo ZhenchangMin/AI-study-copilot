@@ -1,10 +1,11 @@
 const API_BASE = "http://127.0.0.1:8000";
 
-export async function chat(message) {
-  const res = await fetch(`${API_BASE}/api/chat`, {
+// messages: [{ role: "system"|"user"|"assistant", content: string }, ...]
+export async function chat(messages) {
+  const res = await fetch(`${API_BASE}/api/chat_llm`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ messages }),
   });
 
   if (!res.ok) {
@@ -12,6 +13,5 @@ export async function chat(message) {
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
 
-  // { reply: string }
-  return res.json();
+  return res.json(); // { reply: string }
 }

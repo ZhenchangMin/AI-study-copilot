@@ -1,8 +1,13 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from openai import OpenAI
+from pydantic import BaseModel
 
 app = FastAPI(title="AI Study Copilot API")
 
+# CORS for local dev
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -16,6 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# -------- Basic endpoints --------
 @app.get("/health")
 def health():
     return {"ok": True}
@@ -24,8 +30,7 @@ def health():
 def hello():
     return {"msg": "hello from backend"}
 
-from pydantic import BaseModel
-
+# -------- Echo chat (Day 2) --------
 class ChatRequest(BaseModel):
     message: str
 
@@ -33,3 +38,25 @@ class ChatRequest(BaseModel):
 def chat(req: ChatRequest):
     return {"reply": f"You said: {req.message}"}
 
+# -------- LLM chat via DeepSeek (Day 3) --------
+class ChatLLMRequest(BaseModel):
+    messages: list[dict]
+
+@app.post("/api/chat_llm")
+def chat_llm(req: ChatLLMRequest):
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+    if not api_key:
+        return {"reply": "Server missing DEEPSEEK_API_KEY env var."}
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.deepseek.com",
+    )
+
+    resp = client.chat.completions.create(
+        model="deepseek-chat",
+        messages=req.messages,
+        temperature=0.7,
+    )
+
+    return {"reply": resp.choices[0].message.content}
