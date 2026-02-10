@@ -143,11 +143,12 @@ export default function App() {
           }}
         >
           <div style={{ display: "flex", gap: 10 }}>
-            <input
+            <textarea
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
+                // Enter 发送；Shift+Enter 换行（textarea 默认行为）
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   onSend();
@@ -155,15 +156,18 @@ export default function App() {
               }}
               placeholder="Type a message..."
               disabled={sending}
+              rows={2}
               style={{
                 flex: 1,
                 padding: "10px 12px",
                 borderRadius: 10,
                 border: "1px solid #ddd",
                 outline: "none",
+                resize: "none",
+                fontFamily: "inherit",
+                lineHeight: 1.4,
               }}
             />
-
             <button
               onClick={onSend}
               disabled={!canSend}
@@ -179,9 +183,6 @@ export default function App() {
             </button>
           </div>
 
-          <div style={{ marginTop: 8, fontSize: 12, opacity: 0.6 }}>
-            Press Enter to send · Shift+Enter for newline
-          </div>
         </footer>
       </div>
     </div>
