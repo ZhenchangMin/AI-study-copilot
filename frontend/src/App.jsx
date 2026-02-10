@@ -23,14 +23,7 @@ function Bubble({ role, content }) {
           lineHeight: 1.5,
         }}
       >
-        <b
-          style={{
-            display: "block",
-            marginBottom: 4,
-            fontSize: 12,
-            opacity: 0.7,
-          }}
-        >
+        <b style={{ display: "block", marginBottom: 4, fontSize: 12, opacity: 0.7 }}>
           {isUser ? "You" : "Assistant"}
         </b>
         {content}
@@ -45,11 +38,13 @@ export default function App() {
     []
   );
 
+  const MAX_CONTEXT = 10; // ⭐ 只保留最近 10 条消息（核心参数）
+
   const [messages, setMessages] = useState([
     {
       role: "assistant",
       content:
-        "Hi! I can remember our conversation now. Tell me what you're studying.",
+        "Hi! I can remember recent context. Tell me what you're studying.",
     },
   ]);
 
@@ -59,18 +54,18 @@ export default function App() {
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
-  // 用 ref 保存最新 messages，避免闭包旧状态
+  // 保存最新 messages
   const messagesRef = useRef(messages);
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
 
-  // 自动滚动到底
+  // 自动滚动
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 页面加载后默认聚焦输入框
+  // 初始聚焦
   useEffect(() => {
     requestAnimationFrame(() => inputRef.current?.focus());
   }, []);
@@ -80,19 +75,18 @@ export default function App() {
     [input, sending]
   );
 
-  // New Chat
   const onReset = () => {
     setMessages([
       {
         role: "assistant",
-        content: "New chat. What topic are you studying today?",
+        content: "New chat started. What topic are you learning today?",
       },
     ]);
     setInput("");
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
-  // 发送：把完整对话历史（system + messages + 本次 user）发给后端
+  // ⭐ 发送（带上下文截断）
   const onSend = async () => {
     const text = input.trim();
     if (!text || sending) return;
@@ -102,22 +96,28 @@ export default function App() {
 
     const userMsg = { role: "user", content: text };
 
-    // 使用 ref 拿到“最新”的历史，避免旧闭包
+    // 最新历史
     const next = [...messagesRef.current, userMsg];
 
-    // 先更新 UI（只更新一次）
-    setMessages(next);
+    // ⭐⭐⭐ 关键：只保留最近 MAX_CONTEXT 条
+    const trimmed = next.slice(-MAX_CONTEXT);
+
+    // UI 更新也用截断后的，避免无限增长
+    setMessages(trimmed);
 
     try {
-      const reqMessages = [SYSTEM_MESSAGE, ...next];
-      const data = await chat(reqMessages); // { reply: string }
+      const reqMessages = [SYSTEM_MESSAGE, ...trimmed];
+      const data = await chat(reqMessages);
 
-      setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+      setMessages((prev) =>
+        [...prev, { role: "assistant", content: data.reply }].slice(-MAX_CONTEXT)
+      );
     } catch (e) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `Error: ${e.message}` },
-      ]);
+      setMessages((prev) =>
+        [...prev, { role: "assistant", content: `Error: ${e.message}` }].slice(
+          -MAX_CONTEXT
+        )
+      );
     } finally {
       setSending(false);
       requestAnimationFrame(() => inputRef.current?.focus());
@@ -139,7 +139,7 @@ export default function App() {
         <header style={{ padding: "24px 18px 12px" }}>
           <h1 style={{ margin: 0 }}>AI Study Copilot</h1>
           <p style={{ margin: "8px 0 0", opacity: 0.7 }}>
-            Day 3 · DeepSeek LLM + multi-turn memory
+            Day 3 Complete · Multi-turn AI with context window
           </p>
 
           <button
@@ -179,7 +179,6 @@ export default function App() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                // Enter 发送；Shift+Enter 换行（textarea 默认行为）
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   onSend();
